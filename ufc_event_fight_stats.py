@@ -4,71 +4,74 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
 import os 
-
+import csv
 
 
 # Load the CSV file into a DataFrame
 ufc_events = pd.read_csv('ufc_events.csv')
 
-if os.path.exists('ufc_event_fights.csv'):
-    ufc_event_fights = pd.read_csv('ufc_event_fights.csv')
+if os.path.exists('ufc_event_fight_stats.csv'):
+    ufc_event_fights = pd.read_csv('ufc_event_fight_stats.csv')
     written_fight_event_urls = ufc_event_fights['event_url'].tolist()
 else:
+    ufc_event_fights = pd.DataFrame()
     written_fight_event_urls = []
-fight_event_urls = ufc_events['url_link'].tolist()
-# Extract event data
-event_fights = []
+
+ufc_event_urls = ufc_events['url_link'].tolist()
+#print(written_fight_event_urls)
 limit = 0
-for url in fight_event_urls:
-    if limit == 400:
+for url in ufc_event_urls:
+    if limit == 200:
         break
-    if url in written_fight_event_urls:
-        continue
-    else:
+
+
+    if url not in written_fight_event_urls:
+        updated_ufc_event_fights = None
         limit += 1
         print(url)
 
-    response = requests.get(url)
-    if response.status_code != 200:
-        print(f"Failed to retrieve the page. Status code: {response.status_code}")
-        exit()  
+        response = requests.get(url)
+        if response.status_code != 200:
+            print(f"Failed to retrieve the page. Status code: {response.status_code}")
+            exit()  
+            
+        # Parse the HTML content
+        soup = BeautifulSoup(response.text, 'html.parser')
+
         
-    # Parse the HTML content
-    soup = BeautifulSoup(response.text, 'html.parser')
 
+        # Find all event blocks on the page
+        event_blocks = soup.find_all('a', class_='b-flag')
+
+        # Extract the href attribute from each link
+        hrefs = [link['href'] for link in event_blocks]
+
+
+        fighter_stats = pd.read_csv('ufc_fighters.csv')
+        hrefs = set(hrefs)
+        for href in hrefs:
+            i = 0
+            event_fight_data = {}   
     
+           
 
-    # Find all event blocks on the page
-    event_blocks = soup.find_all('a', class_='b-flag')
-
-    # Extract the href attribute from each link
-    hrefs = [link['href'] for link in event_blocks]
+            event_fight_data['fights_url'] = href
+            event_fight_data['event_url'] = url
 
 
-    fighter_stats = pd.read_csv('ufc_fighters.csv')
-    hrefs = set(hrefs)
-    for href in hrefs:
-        i = 0
-        event_fight_data = {}   
-  
-
-    
-
-        event_fight_data['fights_url'] = href
-        event_fight_data['event_url'] = url
+            response = requests.get(href)
 
 
-        response = requests.get(href)
-
-
-        if response.status_code == 200:
+            if response.status_code != 200:
+                print(f"Failed to retrieve the page. Status code: {response.status_code}")
+                exit()  
             result_box = None
             soup = BeautifulSoup(response.content, 'html.parser')
             fighter_names = soup.find_all('a', class_="b-link b-link_style_black")
             test = soup.find_all('section', class_='b-fight-details__section js-fight-section')
             if test[0].get_text(strip=True) == "Round-by-round stats not currently available.":
                 break
-          
+        
         
             f1_name = fighter_names[0].get_text(strip=True)
             f2_name = fighter_names[1].get_text(strip=True)
@@ -79,20 +82,17 @@ for url in fight_event_urls:
             winner_box = soup.find_all('i', class_='b-fight-details__person-status b-fight-details__person-status_style_green')
             weight_class_tag = soup.find_all('i', class_='b-fight-details__fight-title')
             weight_class = weight_class_tag[0].get_text(strip=True)
-           
+        
             for word in weight_class.split():
-          
+        
                 if "weight" in word:
-                   
+                
                     weight_class = word
                     break
             
-           
+        
 
             event_fight_data['weight_class'] = weight_class
- 
-              
-            
 
 
             if winner_box:
@@ -110,13 +110,13 @@ for url in fight_event_urls:
             else:
                 result_box = soup.find_all('i', class_='b-fight-details__person-status b-fight-details__person-status_style_gray')
         
-            if result_box:
-                result = result_box[0].text.strip()
-                
-                if result == "D":
-                    event_fight_data['result'] = "d"
-                elif result == "NC":
-                    event_fight_data['result'] = "nc"
+                if result_box:
+                    result = result_box[0].text.strip()
+                    
+                    if result == "D":
+                        event_fight_data['result'] = "d"
+                    elif result == "NC":
+                        event_fight_data['result'] = "nc"
             
 
             f1 = fighter_stats[fighter_stats['fighter_name'] == f1_name]
@@ -248,27 +248,29 @@ for url in fight_event_urls:
             event_fight_data['f2_grounds'] = int(f2_ground.split()[0])
 
             
-            event_fights.append(event_fight_data)
-            event_fight_data = {}
-        else:
-            print(f"Failed to retrieve the webpage. Status code: {response.status_code}")
+            event_fight_data_df = pd.DataFrame([event_fight_data])
+            updated_ufc_event_fights = pd.concat([ufc_event_fights, event_fight_data_df], ignore_index=True)
+            
+        
+            
 
 
 
-# Create a DataFrame from the extracted data
-df = pd.DataFrame(event_fights)
 
-# Reorder columns
-df = df[['f1_id', 'f2_id', 'f1_name', 'f2_name', 'weight_class', 'f1_knockdowns', 'f2_knockdowns', 'f1_sig_strike_atts', 'f1_sig_strikes',
-        'f2_sig_strike_atts', 'f2_sig_strikes', 'f1_tot_strike_atts', 'f1_tot_strikes','f2_tot_strike_atts', 'f2_tot_strikes',
-        'f1_takedown_atts','f1_takedowns', 'f2_takedown_atts', 'f2_takedowns', 'f1_submissions', 'f2_submissions',
-        'f1_reversals', 'f2_reversals', 'f1_ctrl_time', 'f2_ctrl_time', 'f1_head_strike_atts', 'f1_head_strikes',
-        'f2_head_strike_atts', 'f2_head_strikes', 'f1_body_strike_atts', 'f1_body_strikes', 'f2_body_strike_atts', 'f2_body_strikes',
-        'f1_leg_strike_atts','f1_leg_strikes', 'f2_leg_strike_atts', 'f2_leg_strikes', 'f1_dist_strike_atts', 'f1_dist_strikes',
-        'f2_dist_strike_atts', 'f2_dist_strikes', 'f1_clinch_atts', 'f1_clinchs', 'f2_clinch_atts', 'f2_clinchs',
-        'f1_ground_atts', 'f1_grounds', 'f2_ground_atts', 'f2_grounds', 'result', 'fights_url', 'event_url']]
+            if not updated_ufc_event_fights.empty:
+                # Reorder columns
+                df = updated_ufc_event_fights[['f1_id', 'f2_id', 'f1_name', 'f2_name', 'weight_class', 'f1_knockdowns', 'f2_knockdowns', 'f1_sig_strike_atts', 'f1_sig_strikes',
+                        'f2_sig_strike_atts', 'f2_sig_strikes', 'f1_tot_strike_atts', 'f1_tot_strikes','f2_tot_strike_atts', 'f2_tot_strikes',
+                        'f1_takedown_atts','f1_takedowns', 'f2_takedown_atts', 'f2_takedowns', 'f1_submissions', 'f2_submissions',
+                        'f1_reversals', 'f2_reversals', 'f1_ctrl_time', 'f2_ctrl_time', 'f1_head_strike_atts', 'f1_head_strikes',
+                        'f2_head_strike_atts', 'f2_head_strikes', 'f1_body_strike_atts', 'f1_body_strikes', 'f2_body_strike_atts', 'f2_body_strikes',
+                        'f1_leg_strike_atts','f1_leg_strikes', 'f2_leg_strike_atts', 'f2_leg_strikes', 'f1_dist_strike_atts', 'f1_dist_strikes',
+                        'f2_dist_strike_atts', 'f2_dist_strikes', 'f1_clinch_atts', 'f1_clinchs', 'f2_clinch_atts', 'f2_clinchs',
+                        'f1_ground_atts', 'f1_grounds', 'f2_ground_atts', 'f2_grounds', 'result', 'fights_url', 'event_url']]
+               
+                df.to_csv('ufc_event_fight_stats.csv', index=False)
 
-df.to_csv('ufc_event_fights.csv', index=False)
+            ufc_event_fights = pd.read_csv('ufc_event_fight_stats.csv')
 
-print("Data has been scraped and saved to 'ufc_event_fights.csv'.")
+print("Data has been scraped and saved to 'ufc_event_fight_stats.csv'.")
 
