@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 import os 
 import csv
-
+# uFC ~21 ish is when they changed the time formatting
 
 # Load the CSV file into a DataFrame
 ufc_events = pd.read_csv('ufc_events.csv')
@@ -68,10 +68,11 @@ for url in ufc_event_urls:
             result_box = None
             soup = BeautifulSoup(response.content, 'html.parser')
             fighter_names = soup.find_all('a', class_="b-link b-link_style_black")
-            test = soup.find_all('section', class_='b-fight-details__section js-fight-section')
-            if test[0].get_text(strip=True) == "Round-by-round stats not currently available.":
+            fight_section = soup.find_all('section', class_='b-fight-details__section js-fight-section')
+            if fight_section[0].get_text(strip=True) == "Round-by-round stats not currently available.":
                 break
-        
+                
+            
         
             f1_name = fighter_names[0].get_text(strip=True)
             f2_name = fighter_names[1].get_text(strip=True)
@@ -90,7 +91,13 @@ for url in ufc_event_urls:
                     weight_class = word
                     break
             
+            label_box = soup.find_all('i', class_='b-fight-details__text-item')
+
+            
+      
+            total_fight_time = int(label_box[2].get_text(strip=True).split()[1][-1])*5*60
         
+            event_fight_data['total_fight_time'] = total_fight_time
 
             event_fight_data['weight_class'] = weight_class
 
@@ -266,7 +273,7 @@ for url in ufc_event_urls:
                         'f2_head_strike_atts', 'f2_head_strikes', 'f1_body_strike_atts', 'f1_body_strikes', 'f2_body_strike_atts', 'f2_body_strikes',
                         'f1_leg_strike_atts','f1_leg_strikes', 'f2_leg_strike_atts', 'f2_leg_strikes', 'f1_dist_strike_atts', 'f1_dist_strikes',
                         'f2_dist_strike_atts', 'f2_dist_strikes', 'f1_clinch_atts', 'f1_clinchs', 'f2_clinch_atts', 'f2_clinchs',
-                        'f1_ground_atts', 'f1_grounds', 'f2_ground_atts', 'f2_grounds', 'result', 'fights_url', 'event_url']]
+                        'f1_ground_atts', 'f1_grounds', 'f2_ground_atts', 'f2_grounds', 'total_fight_time', 'result', 'fights_url', 'event_url']]
                
                 df.to_csv('ufc_event_fight_stats.csv', index=False)
 
