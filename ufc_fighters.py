@@ -125,9 +125,9 @@ for letter in alphabet:
         fighter_data['fighter_id'] = fighter_id_counter
         columns = fighter.find_all('td')
         if columns and not all(col['class'] == ['b-statistics__table-col_type_clear'] for col in columns): 
-            print(columns)
+     
             for i, column in enumerate(columns):
-                print(column)
+              
                 a_tag = column.find('a')
             
                 if a_tag and a_tag_limit < 2:

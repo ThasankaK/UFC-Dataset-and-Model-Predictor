@@ -19,6 +19,7 @@ ufc_fighters['avg_takedowns'] = pd.NA
 ufc_fighters['avg_clinch_atts'] = pd.NA
 ufc_fighters['avg_clinchs'] = pd.NA
 ufc_fighters['avg_ctrl_time'] = pd.NA
+ufc_fighters['avg_fight_time'] = pd.NA
 ufc_fighters['avg_submissions'] = pd.NA
 ufc_fighters['avg_reversals'] = pd.NA
 ufc_fighters['avg_head_strike_atts'] = pd.NA
@@ -56,7 +57,7 @@ for id in fighter_ids:
     submissions_count = 0
     reversals_count = 0
 
-    avg_ctrl_time = 0
+    ctrl_time = 0
 
     head_strike_atts_count = 0
     head_strike_count = 0 
@@ -75,6 +76,8 @@ for id in fighter_ids:
 
     ground_atts_count = 0
     ground_count = 0
+
+    tot_fight_time = 0 
 
     fight_counts = 0 
 
@@ -114,13 +117,8 @@ for id in fighter_ids:
         dist_strike_atts_count += row.f1_dist_strike_atts if f1_id == True else row.f2_dist_strike_atts
         dist_strike_count += row.f1_dist_strikes if f1_id == True else row.f2_dist_strikes
         
-        ctrl_time = row.f1_ctrl_time if f1_id == True else row.f2_ctrl_time
-        tot_fight_time = row.total_fight_time
-     
-        if np.isnan(ctrl_time) or np.isnan(tot_fight_time):
-            avg_ctrl_time = 0 
-        else:
-            avg_ctrl_time += int(ctrl_time)/int(tot_fight_time)
+        ctrl_time += row.f1_ctrl_time if f1_id == True else row.f2_ctrl_time
+        tot_fight_time += row.total_fight_time
 
         ground_atts_count += row.f1_ground_atts if f1_id == True else row.f2_ground_atts
         ground_count += row.f1_grounds if f1_id == True else row.f2_grounds
@@ -137,6 +135,7 @@ for id in fighter_ids:
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_takedowns'] = 0
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_clinch_atts'] =  0
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_clinchs'] =0
+        ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_fight_time'] = 0
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_ctrl_time'] =0
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_submissions'] = 0
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_reversals'] = 0
@@ -162,11 +161,12 @@ for id in fighter_ids:
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_takedowns'] = takedowns_count / fight_counts
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_clinch_atts'] =  clinch_atts_count / fight_counts
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_clinchs'] = clinch_count / fight_counts
-        ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_ctrl_time'] = avg_ctrl_time
+        ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_fight_time'] = tot_fight_time / fight_counts
+        ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_ctrl_time'] = ctrl_time / fight_counts
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_submissions'] = submissions_count / fight_counts
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_reversals'] = reversals_count / fight_counts
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_head_strike_atts'] =  head_strike_atts_count / fight_counts
-        ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_head_strike'] = head_strike_count / fight_counts
+        ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_head_strikes'] = head_strike_count / fight_counts
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_body_strike_atts'] = body_strike_atts_count / fight_counts
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_body_strikes'] = body_strike_count / fight_counts
         ufc_fighters.loc[ufc_fighters['fighter_id'] == id, 'avg_leg_strike_atts'] = leg_strike_atts_count / fight_counts

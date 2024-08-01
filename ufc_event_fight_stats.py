@@ -83,21 +83,24 @@ for url in ufc_event_urls:
             winner_box = soup.find_all('i', class_='b-fight-details__person-status b-fight-details__person-status_style_green')
             weight_class_tag = soup.find_all('i', class_='b-fight-details__fight-title')
             weight_class = weight_class_tag[0].get_text(strip=True)
-        
-            for word in weight_class.split():
-        
-                if "weight" in word:
-                
-                    weight_class = word
-                    break
-            
+          
             label_box = soup.find_all('i', class_='b-fight-details__text-item')
 
             
-      
-            total_fight_time = int(label_box[2].get_text(strip=True).split()[1][-1])*5*60
-        
-            event_fight_data['total_fight_time'] = total_fight_time
+            rounds_text = label_box[0].get_text(strip=True)
+            rounds = int(rounds_text.split(':')[-1]) # each round will be 5 minutes\
+            if rounds != 0:
+                rounds -= 1
+            
+
+
+            total_fight_time_text = label_box[1].get_text(strip=True)#.split()[1][-1])*5*60
+            total_fight_time = total_fight_time_text.split('Time:')[-1]
+            minutes = total_fight_time.split(':')[0]
+            seconds = total_fight_time.split(':')[-1]
+            #print(int(rounds)*300 + int(minutes)*60 + int(seconds))
+            event_fight_data['f1_total_fight_time'] = int(rounds)*300 + int(minutes)*60 + int(seconds)
+            event_fight_data['f2_total_fight_time'] = int(rounds)*300 + int(minutes)*60 + int(seconds)
 
             event_fight_data['weight_class'] = weight_class
 
@@ -273,7 +276,7 @@ for url in ufc_event_urls:
                         'f2_head_strike_atts', 'f2_head_strikes', 'f1_body_strike_atts', 'f1_body_strikes', 'f2_body_strike_atts', 'f2_body_strikes',
                         'f1_leg_strike_atts','f1_leg_strikes', 'f2_leg_strike_atts', 'f2_leg_strikes', 'f1_dist_strike_atts', 'f1_dist_strikes',
                         'f2_dist_strike_atts', 'f2_dist_strikes', 'f1_clinch_atts', 'f1_clinchs', 'f2_clinch_atts', 'f2_clinchs',
-                        'f1_ground_atts', 'f1_grounds', 'f2_ground_atts', 'f2_grounds', 'total_fight_time', 'result', 'fights_url', 'event_url']]
+                        'f1_ground_atts', 'f1_grounds', 'f2_ground_atts', 'f2_grounds', 'f1_total_fight_time', 'f2_total_fight_time', 'result', 'fights_url', 'event_url']]
                
                 df.to_csv('ufc_event_fight_stats.csv', index=False)
 
