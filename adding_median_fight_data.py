@@ -17,7 +17,7 @@ stat_columns = [
 
 # create  new columns and initialize
 for stat_column in stat_columns:
-    ufc_fighters[f"avg_{stat_column}"] = np.nan
+    ufc_fighters[f"median_{stat_column}"] = np.nan
 
 
 for fighter_id in ufc_fighters["fighter_id"].unique():
@@ -28,7 +28,7 @@ for fighter_id in ufc_fighters["fighter_id"].unique():
     if filtered_df.empty:
         # no fights found
         for stat_column in stat_columns:
-            ufc_fighters.loc[ufc_fighters["fighter_id"] == fighter_id, f"avg_{stat_column}"] = 0
+            ufc_fighters.loc[ufc_fighters["fighter_id"] == fighter_id, f"median_{stat_column}"] = 0
         continue
 
 
@@ -42,10 +42,10 @@ for fighter_id in ufc_fighters["fighter_id"].unique():
 
         
         all_stats_for_fighter = np.concatenate((stats_as_f1, stats_as_f2))
-        median_stat = np.mean(all_stats_for_fighter) if all_stats_for_fighter.size > 0 else 0
+        median_stat = np.median(all_stats_for_fighter) if all_stats_for_fighter.size > 0 else 0
 
         # .loc(row selection, column selection) 
-        ufc_fighters.loc[ufc_fighters["fighter_id"] == fighter_id, f"avg_{stat_column}"] = median_stat
+        ufc_fighters.loc[ufc_fighters["fighter_id"] == fighter_id, f"median_{stat_column}"] = median_stat
 
 
-ufc_fighters.to_csv("ufc_fighters_avg.csv", index=False)
+ufc_fighters.to_csv("ufc_fighters_median.csv", index=False)
