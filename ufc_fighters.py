@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from datetime import datetime
-
+import os
 
 def get_more_info(fighter_info_url, soup):
     formatted_date = None
@@ -48,15 +48,15 @@ def get_more_info(fighter_info_url, soup):
         else:
             return None
         
-        # Find the container with the career statistics
+        # find the container with the career statistics
         stats_container = soup.find('div', class_='b-list__info-box b-list__info-box_style_middle-width js-guide clearfix')
         
-        # Check if the container was found
+        # check if the container was found
         if stats_container:
-            # Dictionary to hold the stats
+            # dictionary to hold the stats
             stats = {}
             
-            # Extract stats from the left column
+            # extract stats from the left column
             left_stats = stats_container.find('div', class_='b-list__info-box-left clearfix').find_all('li', class_='b-list__box-list-item b-list__box-list-item_type_block')
             for stat in left_stats:
                 label = stat.find('i', class_='b-list__box-item-title').get_text(strip=True)
@@ -94,13 +94,24 @@ def get_more_info(fighter_info_url, soup):
         print("Failed to retrieve the webpage.")
 
 
+def get_fighter_id():
+    id = 1
+    if os.path.exists('ufc_fighters.csv'):
+        fighter_data = pd.read_csv('ufc_fighters.csv')
+        fighter_ids = fighter_data['fighter_id'].tolist()
+        while id in fighter_ids:
+            id += 1
+    
+    return id
 
-fighters = []
 alphabet = 'abcdefghijklmnopqrstuvwxyz'
-fighter_id_counter = 1
 for letter in alphabet:
     # url of the UFC fighters' statistics page
     url = f'http://www.ufcstats.com/statistics/fighters?char={letter}&page=all'
+    print(letter)
+    
+        
+
 
 
     response = requests.get(url)
@@ -111,18 +122,26 @@ for letter in alphabet:
     
     
     soup = BeautifulSoup(response.text, 'html.parser')
-    # Find all fighter blocks on the page
+    # find all fighter blocks on the page
     fighter_blocks = soup.find_all('tr', class_='b-statistics__table-row')
 
-    # Initialize fighter ID counter
+    # initialize fighter ID counter
     
     for fighter in fighter_blocks:
+        if os.path.exists('ufc_fighters.csv'):
+            csv_fighter_data = pd.read_csv('ufc_fighters.csv')
+            fighter_urls = csv_fighter_data['fighter_url'].tolist()
+        else:
+            csv_fighter_data = pd.DataFrame()
+            fighter_urls = []
+        data_exists = False
         name = ""
         td_tag_count = 1
         a_tag_limit = 0 
 
         fighter_data = {}
-        fighter_data['fighter_id'] = fighter_id_counter
+        fighter_data['fighter_id'] = get_fighter_id()
+        
         columns = fighter.find_all('td')
         if columns and not all(col['class'] == ['b-statistics__table-col_type_clear'] for col in columns): 
      
@@ -134,8 +153,12 @@ for letter in alphabet:
                     
                     name += a_tag.text.strip() + " "
                     
-            
+                    
                     url = a_tag['href'].strip()
+                    print(url)
+                    if url in fighter_urls:
+                        data_exists = True
+                        break
                     fighter_data['fighter_name'] = name.strip()
                     fighter_data['fighter_url'] = url
 
@@ -186,18 +209,21 @@ for letter in alphabet:
                             fighter_data['fighter_draws'] = column.text.strip()
 
                         td_tag_count += 1
-            #fighter_data['fighter_name'] = fighter_data['fighter_name'].strip()
-            fighters.append(fighter_data)
-            fighter_id_counter += 1
+            
+                
 
+            if data_exists:
+                continue
+            fighter_data_df = pd.DataFrame([fighter_data])
+            updated_df_fighters = pd.concat([csv_fighter_data, fighter_data_df], ignore_index=True)
+          
 
-df_fighters = pd.DataFrame(fighters)
+            # reorder
+            df_fighters = updated_df_fighters[['fighter_id', 'fighter_name', 'fighter_dob', 'fighter_height_cm', 'fighter_weight_lbs', 'fighter_reach_cm', 'fighter_stance',
+                                    'fighter_wins', 'fighter_losses', 'fighter_draws', 'fighter_slpm', 'fighter_str_acc_%', 'fighter_sapm',  'fighter_str_def_%', 
+                                    'fighter_td_avg', 'fighter_td_acc_%', 'fighter_td_def_%', 'fighter_sub_avg', 'fighter_url']]
 
-# reorder
-df_fighters = df_fighters[['fighter_id', 'fighter_name', 'fighter_dob', 'fighter_height_cm', 'fighter_weight_lbs', 'fighter_reach_cm', 'fighter_stance',
-                           'fighter_wins', 'fighter_losses', 'fighter_draws', 'fighter_slpm', 'fighter_str_acc_%', 'fighter_sapm',  'fighter_str_def_%', 
-                           'fighter_td_avg', 'fighter_td_acc_%', 'fighter_td_def_%', 'fighter_sub_avg', 'fighter_url']]
+            df_fighters.to_csv('ufc_fighters.csv', index=False)
+        
+           
 
-df_fighters.to_csv('ufc_fighters.csv', index=False)
-
-print("Fighter data has been scraped and saved to 'ufc_fighters.csv'.")
